@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  用户表 Mapper XML（课程实验一要求的分层持久化）
+  namespace 必须与 UserMapper 接口全限定名一致
+-->
+<mapper namespace="cn.zjnu.a02.m1perception.mapper.UserMapper">
+
+    <!-- 显式列清单：避免 SELECT * 在表结构演进时污染实体 -->
+    <sql id="columns">
+        id, username, password_hash, nickname, role, status, created_at, updated_at, deleted
+    </sql>
+
+    <select id="selectById" resultType="cn.zjnu.a02.m1perception.entity.User">
+        SELECT <include refid="columns"/>
+        FROM sys_user
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="selectByUsername" resultType="cn.zjnu.a02.m1perception.entity.User">
+        SELECT <include refid="columns"/>
+        FROM sys_user
+        WHERE username = #{username} AND deleted = 0
+    </select>
+
+    <select id="countByUsername" resultType="int">
+        SELECT COUNT(*) FROM sys_user WHERE username = #{username} AND deleted = 0
+    </select>
+
+    <insert id="insert" parameterType="cn.zjnu.a02.m1perception.entity.User"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user (username, password_hash, nickname, role, status, deleted)
+        VALUES (#{username}, #{passwordHash}, #{nickname}, #{role}, 'ACTIVE', 0)
+    </insert>
+
+    <update id="updateRole">
+        UPDATE sys_user SET role = #{role}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE sys_user SET password_hash = #{passwordHash}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+    <!-- 逻辑删除：个人数据可追溯，物理删除统一走 DataErasureService -->
+    <update id="softDelete">
+        UPDATE sys_user SET deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+    <select id="selectAll" resultType="cn.zjnu.a02.m1perception.entity.User">
+        SELECT <include refid="columns"/>
+        FROM sys_user WHERE deleted = 0 ORDER BY id
+    </select>
+
+</mapper>

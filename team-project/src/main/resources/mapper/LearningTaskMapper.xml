@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zjnu.a02.m5execution.mapper.LearningTaskMapper">
+
+    <!--
+      学习任务表 Mapper XML（课程实验一「任务表 CRUD」）
+      注意：selectByUser 用 LEFT JOIN 关联出所属单元与阶段名，
+      这是 XML 方式相对于注解方式的优势：多表关联更适合集中维护与评审。
+    -->
+    <sql id="joinedColumns">
+        t.id, t.user_id, t.unit_id, t.title, t.due_date, t.status, t.done_at, t.created_at,
+        u.title AS unit_title, s.name AS stage_name
+    </sql>
+
+    <select id="selectByUser" resultType="cn.zjnu.a02.m5execution.entity.LearningTask">
+        SELECT <include refid="joinedColumns"/>
+        FROM learning_task t
+        LEFT JOIN learning_unit u ON u.id = t.unit_id
+        LEFT JOIN path_stage s ON s.id = u.stage_id
+        WHERE t.user_id = #{userId}
+        <if test="status != null and status != '' and status != 'ALL'">
+            AND t.status = #{status}
+        </if>
+        ORDER BY (t.due_date IS NULL), t.due_date, t.id
+    </select>
+
+    <select id="selectByIdAndUser" resultType="cn.zjnu.a02.m5execution.entity.LearningTask">
+        SELECT <include refid="joinedColumns"/>
+        FROM learning_task t
+        LEFT JOIN learning_unit u ON u.id = t.unit_id
+        LEFT JOIN path_stage s ON s.id = u.stage_id
+        WHERE t.id = #{id} AND t.user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="cn.zjnu.a02.m5execution.entity.LearningTask"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO learning_task (user_id, unit_id, title, due_date, status)
+        VALUES (#{userId}, #{unitId}, #{title}, #{dueDate}, 'TODO')
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE learning_task
+        SET status = #{status},
+            done_at = <choose><when test="markDone">CURRENT_TIMESTAMP</when><otherwise>NULL</otherwise></choose>
+        WHERE id = #{id}
+    </update>
+
+    <select id="countByUser" resultType="int">
+        SELECT COUNT(*) FROM learning_task WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*) FROM learning_task WHERE user_id = #{userId} AND status = #{status}
+    </select>
+
+    <select id="countOverdue" resultType="int">
+        SELECT COUNT(*) FROM learning_task
+        WHERE user_id = #{userId} AND status &lt;&gt; 'DONE'
+          AND due_date IS NOT NULL AND due_date &lt; CURRENT_DATE
+    </select>
+
+</mapper>

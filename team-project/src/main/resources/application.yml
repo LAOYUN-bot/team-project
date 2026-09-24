@@ -1,0 +1,90 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  application:
+    name: a02-career-navigator
+  # 默认 profile：H2 内存库，零配置启动（无 Docker / 无 MySQL 也可演示）
+  datasource:
+    url: jdbc:h2:mem:a02;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
+      encoding: UTF-8
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  mvc:
+    async:
+      request-timeout: 120000
+  threads:
+    virtual:
+      enabled: false
+
+# MyBatis（课程实验一：Entity / Mapper / Service / Controller 分层）
+# 实体 CRUD 走 MyBatis Mapper；跨表聚合与分析型查询仍走 JdbcTemplate（见 README §7）
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: cn.zjnu.a02.m1perception.entity,cn.zjnu.a02.m5execution.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    default-statement-timeout: 30
+    cache-enabled: false
+
+a02:
+  # AI 能力开关（架构文档 §7.2 AD-2）：mock = 本地规则/模板，无需百宝箱权限
+  # tbox = 蚂蚁百宝箱企业版（需 TBOX_API_KEY / TBOX_AGENT_ID）
+  ai:
+    provider: mock
+    fallback-enabled: true
+    max-retry: 2
+    temperature:
+      path: 0.3
+      incentive: 0.8
+    tbox:
+      base-url: https://api.tbox.cn
+      api-key: ${TBOX_API_KEY:}
+      agent-id: ${TBOX_AGENT_ID:}
+  security:
+    jwt:
+      # Demo 用固定密钥；生产必须走环境变量（架构文档 §11.2）
+      secret: ${JWT_SECRET:a02-demo-secret-key-please-change-in-production-0123456789}
+      access-ttl-minutes: 120
+    crypto:
+      # 敏感字段 AES-GCM 列加密密钥（Demo 固定；生产走环境变量）
+      field-key: ${FIELD_AES_KEY:a02-demo-field-key-32bytes-min!!}
+  ratelimit:
+    ai-per-minute: 30
+
+logging:
+  level:
+    root: INFO
+    cn.zjnu.a02: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %logger{20} - %msg%n"
+
+---
+# MySQL 可选 profile（需先创建库：CREATE DATABASE a02 DEFAULT CHARSET utf8mb4;）
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/a02?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+  sql:
+    init:
+      mode: always
+      continue-on-error: true

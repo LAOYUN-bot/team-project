@@ -1,0 +1,7 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"query_job_market","arguments":{"keyword":"Java"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"search_course","arguments":{"skill":"MySQL","limit":2}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"verify_certificate","arguments":{"cert_name":"软件设计师"}}}
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"unknown_tool","arguments":{}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"query_job_market","arguments":{"keyword":"Java'; DROP TABLE sys_user;--"}}}

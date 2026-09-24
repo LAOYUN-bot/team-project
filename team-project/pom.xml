@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    A02 面向未来工作的 AI 职业导航与终身学习伙伴系统 —— 可运行 Demo
+    架构依据：docs/04-架构设计.md
+    本工程采用「单模块 + 严格分包」形态（架构文档 §4.1 明确允许的兜底策略）：
+    包名与文档的多模块划分完全一致（common / ai / platform / m1perception ... m6feedback），
+    后续网络与依赖齐备时可无痛拆分为 Maven 多模块。
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.8</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>cn.zjnu.a02</groupId>
+  <artifactId>a02-career-navigator</artifactId>
+  <version>1.0.0</version>
+  <name>a02-career-navigator</name>
+  <description>A02 AI 职业导航与终身学习伙伴系统（六步闭环 Demo）</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!--
+      本机为离线环境（无外网），本地仓库中的插件版本需显式固定，
+      否则 Maven 会解析到仓库中缺少 jar 的版本而失败。
+    -->
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <!-- H2 与 spring-security-crypto 需固定版本：Boot BOM 指向的版本不在本地仓库中 -->
+    <h2.version>2.2.224</h2.version>
+    <spring-security-crypto.version>5.7.11</spring-security-crypto.version>
+    <mybatis-starter.version>4.0.1</mybatis-starter.version>
+    <junit-platform.version>6.0.3</junit-platform.version>
+  </properties>
+
+  <dependencies>
+    <!-- Web MVC + 内嵌 Tomcat（Spring Boot 4 中 webmvc starter 取代了旧 web starter） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+
+    <!-- 数据访问：MyBatis（实体 CRUD，课程实验一要求）+ JdbcTemplate（跨表聚合/分析型查询） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mybatis.spring.boot</groupId>
+      <artifactId>mybatis-spring-boot-starter</artifactId>
+      <version>${mybatis-starter.version}</version>
+    </dependency>
+
+    <!-- 内存数据库：默认 profile 零配置启动（无需 Docker / MySQL） -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>${h2.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- 仅取 BCryptPasswordEncoder，满足课程「密码 BCrypt 入库」要求 -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-crypto</artifactId>
+      <version>${spring-security-crypto.version}</version>
+    </dependency>
+
+    <!-- 测试：JUnit 5 + Mockito + AssertJ -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      IntelliJ IDEA 运行 JUnit 5 测试要求 junit-platform-launcher 位于测试类路径上
+      （Maven Surefire 会自动引入，IDEA 的测试运行器不会），因此显式声明。
+    -->
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>${junit-platform.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

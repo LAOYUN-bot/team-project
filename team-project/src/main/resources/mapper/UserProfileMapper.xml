@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zjnu.a02.m1perception.mapper.UserProfileMapper">
+
+    <sql id="columns">
+        id, user_id, education, major, grade, work_years, current_job,
+        target_job_id, interest_tags, weekly_hours, phone_enc, email_enc, updated_at
+    </sql>
+
+    <select id="selectByUserId" resultType="cn.zjnu.a02.m1perception.entity.UserProfile">
+        SELECT <include refid="columns"/>
+        FROM user_profile WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM user_profile WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="cn.zjnu.a02.m1perception.entity.UserProfile"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_profile
+            (user_id, education, major, grade, work_years, current_job,
+             target_job_id, interest_tags, weekly_hours, phone_enc, email_enc)
+        VALUES
+            (#{userId}, #{education}, #{major}, #{grade}, #{workYears}, #{currentJob},
+             #{targetJobId}, #{interestTags}, #{weeklyHours}, #{phoneEnc}, #{emailEnc})
+    </insert>
+
+    <update id="update" parameterType="cn.zjnu.a02.m1perception.entity.UserProfile">
+        UPDATE user_profile
+        SET education = #{education},
+            major = #{major},
+            grade = #{grade},
+            work_years = #{workYears},
+            current_job = #{currentJob},
+            target_job_id = #{targetJobId},
+            interest_tags = #{interestTags},
+            weekly_hours = #{weeklyHours},
+            phone_enc = #{phoneEnc},
+            email_enc = #{emailEnc},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <delete id="deleteByUserId">
+        DELETE FROM user_profile WHERE user_id = #{userId}
+    </delete>
+
+</mapper>
