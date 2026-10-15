@@ -21,19 +21,33 @@ const Charts = (() => {
 
   const clear = (host) => { while (host.firstChild) host.removeChild(host.firstChild); };
 
-  /** 颜色板（与 CSS 主题一致） */
+  /** 读取 app.css 的设计令牌；取不到时回落到浅色主题的同等值 */
+  const cssVar = (name, fallback) => {
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    } catch (e) { return fallback; }
+  };
+
+  /**
+   * 颜色板 —— 与 app.css 的 :root 令牌同源（不再硬编码深色值）。
+   * 换主题只需改 CSS，图表自动跟随。
+   */
   const C = {
-    primary: '#4f8cff',
-    primarySoft: 'rgba(79,140,255,0.18)',
-    accent: '#37d0a4',
-    accentSoft: 'rgba(55,208,164,0.18)',
-    warn: '#ffb454',
-    danger: '#ff6b81',
-    grid: 'rgba(255,255,255,0.10)',
-    axis: 'rgba(255,255,255,0.22)',
-    text: '#c8d3e6',
-    textDim: '#8494ad',
-    prev: '#8b9bb4',
+    primary: cssVar('--primary', '#2563eb'),
+    primarySoft: cssVar('--chart-fill', 'rgba(37,99,235,0.13)'),
+    accent: cssVar('--accent', '#0e9f6e'),
+    accentSoft: cssVar('--chart-fill-accent', 'rgba(14,159,110,0.16)'),
+    warn: cssVar('--warn', '#c2740a'),
+    danger: cssVar('--danger', '#d92d20'),
+    grid: cssVar('--chart-grid', 'rgba(17,24,39,0.07)'),
+    axis: cssVar('--chart-axis', 'rgba(17,24,39,0.13)'),
+    text: cssVar('--text-soft', '#4d5566'),
+    textDim: cssVar('--text-dim', '#8b93a3'),
+    strong: cssVar('--text', '#1b2130'),
+    surface: cssVar('--surface', '#ffffff'),
+    track: cssVar('--surface-sunken', '#f2f4f7'),
+    prev: cssVar('--chart-prev', '#c3c9d4'),
   };
 
   /* ---------------------------------------------------------------------------
@@ -51,7 +65,10 @@ const Charts = (() => {
     const angle = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
     const point = (i, ratio) => [cx + Math.cos(angle(i)) * r * ratio, cy + Math.sin(angle(i)) * r * ratio];
 
-    const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, class: 'chart-svg', width: '100%',
+    // viewBox 左右各留出 marginX：维度标签写在圆外，需要额外横向空间，否则水平方向会被裁掉
+    const labelR = 1.14;
+    const marginX = 46;
+    const svg = el('svg', { viewBox: `${-marginX} 0 ${size + marginX * 2} ${size}`, class: 'chart-svg', width: '100%',
       height: 'auto', role: 'img', 'aria-label': '职业能力雷达图' });
 
     // 网格环 + 刻度
@@ -81,17 +98,17 @@ const Charts = (() => {
     poly.style.animation = 'radarIn .55s ease-out';
     svg.appendChild(poly);
 
-    // 顶点 + 分值
+    // 顶点 + 分值：维度名与分值合并为一段文本。
+    // 原实现把两者放在同一条射线的 1.16r / 1.30r 上，水平方向会互相压字，故改为一行两段。
     dimensions.forEach((d, i) => {
       const [x, y] = point(i, clamp01((d.score || 0) / 100));
-      svg.appendChild(el('circle', { cx: x, cy: y, r: 3.4, fill: C.primary, stroke: '#0d1521', 'stroke-width': 1.2 }));
-      const [lx, ly] = point(i, 1.16);
+      svg.appendChild(el('circle', { cx: x, cy: y, r: 3.4, fill: C.primary, stroke: C.surface, 'stroke-width': 1.6 }));
+      const [lx, ly] = point(i, labelR);
       const anchor = Math.abs(lx - cx) < 12 ? 'middle' : (lx > cx ? 'start' : 'end');
-      svg.appendChild(el('text', { x: lx, y: ly, fill: C.text, 'font-size': 11.5,
-        'text-anchor': anchor, 'dominant-baseline': 'middle' }, d.label));
-      const [vx, vy] = point(i, 1.30);
-      svg.appendChild(el('text', { x: vx, y: vy, fill: C.accent, 'font-size': 11,
-        'text-anchor': anchor, 'dominant-baseline': 'middle', 'font-weight': 600 }, fmt(d.score)));
+      const label = el('text', { x: lx, y: ly, fill: C.text, 'font-size': 11.5,
+        'text-anchor': anchor, 'dominant-baseline': 'middle' }, d.label);
+      label.appendChild(el('tspan', { dx: 5, fill: C.strong, 'font-size': 11, 'font-weight': 600 }, fmt(d.score)));
+      svg.appendChild(label);
     });
 
     host.appendChild(svg);
@@ -138,9 +155,9 @@ const Charts = (() => {
       'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
 
     points.forEach((p, i) => {
-      svg.appendChild(el('circle', { cx: x(i), cy: y(values[i]), r: 4, fill: '#0d1521',
-        stroke: C.accent, 'stroke-width': 2 }));
-      svg.appendChild(el('text', { x: x(i), y: y(values[i]) - 11, fill: C.accent, 'font-size': 10.5,
+      svg.appendChild(el('circle', { cx: x(i), cy: y(values[i]), r: 4, fill: C.surface,
+        stroke: C.primary, 'stroke-width': 2.2 }));
+      svg.appendChild(el('text', { x: x(i), y: y(values[i]) - 11, fill: C.strong, 'font-size': 10.5,
         'text-anchor': 'middle', 'font-weight': 600 }, fmt(values[i])));
       svg.appendChild(el('text', { x: x(i), y: h - 9, fill: C.textDim, 'font-size': 10,
         'text-anchor': 'middle' }, p.label));
@@ -160,15 +177,15 @@ const Charts = (() => {
     const c = 2 * Math.PI * r;
     const p = clamp01((Number(percent) || 0) / 100);
 
-    const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, class: 'chart-svg', width: '100%',
+    const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, class: 'chart-svg chart-ring', width: '100%',
       height: 'auto', role: 'img', 'aria-label': '学习任务完成率' });
     svg.appendChild(el('circle', { cx: size / 2, cy: size / 2, r, fill: 'none',
-      stroke: 'rgba(255,255,255,0.09)', 'stroke-width': stroke }));
-    const arc = el('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: C.accent,
+      stroke: C.track, 'stroke-width': stroke }));
+    const arc = el('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: C.primary,
       'stroke-width': stroke, 'stroke-linecap': 'round',
       'stroke-dasharray': `${c * p} ${c}`, transform: `rotate(-90 ${size / 2} ${size / 2})` });
     svg.appendChild(arc);
-    svg.appendChild(el('text', { x: size / 2, y: size / 2 - 2, fill: '#ffffff', 'font-size': 30,
+    svg.appendChild(el('text', { x: size / 2, y: size / 2 - 2, fill: C.strong, 'font-size': 30,
       'font-weight': 700, 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, `${fmt(percent)}%`));
     svg.appendChild(el('text', { x: size / 2, y: size / 2 + 24, fill: C.textDim, 'font-size': 11,
       'text-anchor': 'middle' }, options.label || '完成率'));
@@ -183,8 +200,8 @@ const Charts = (() => {
     if (!cells || !cells.length) { host.innerHTML = '<p class="empty">暂无打卡记录</p>'; return; }
     const cell = options.cell || 13;
     const gap = options.gap || 3.5;
-    const colors = ['rgba(255,255,255,0.06)', 'rgba(55,208,164,0.28)', 'rgba(55,208,164,0.5)',
-      'rgba(55,208,164,0.74)', '#37d0a4'];
+    const colors = [C.track, C.accentSoft, 'rgba(14,159,110,0.42)',
+      'rgba(14,159,110,0.72)', C.accent];
 
     // 按周分列：第一列补齐到周一
     const first = new Date(cells[0].date + 'T00:00:00');

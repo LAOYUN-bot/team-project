@@ -1310,7 +1310,7 @@
           </div>
           <div class="grid cols-3" style="gap:11px">
             ${Object.entries(overview.steps || {}).map(([step, values]) => `
-              <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03)">
+              <div class="card" style="box-shadow:none;background:var(--surface-soft);border-color:var(--line-soft)">
                 <div class="card-title" style="margin-bottom:7px">${esc(step)}</div>
                 ${Object.entries(values).map(([k, v]) => `
                   <div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}
