@@ -25,7 +25,14 @@
   <description>A02 AI 职业导航与终身学习伙伴系统（六步闭环 Demo）</description>
 
   <properties>
+    <!--
+      JDK 版本统一钉死在 17：
+        · java.version 供 Spring Boot 父 POM 使用
+        · maven.compiler.release 显式声明，保证即使有人用 JDK 21/25 执行 mvn，
+          产出的字节码也一定是 17（major version 61），不会被误升上去
+    -->
     <java.version>17</java.version>
+    <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!--
       本机为离线环境（无外网），本地仓库中的插件版本需显式固定，
@@ -38,6 +45,12 @@
     <spring-security-crypto.version>5.7.11</spring-security-crypto.version>
     <mybatis-starter.version>4.0.1</mybatis-starter.version>
     <junit-platform.version>6.0.3</junit-platform.version>
+    <!--
+      Lombok 版本显式固定：
+      Boot 4.0.8 的 BOM 里 lombok.version = 1.18.46，本地仓库有 1.18.28/1.18.30/1.18.46，
+      这里写死 1.18.46，是为了让下面的 annotationProcessorPaths 能确定地引用同一个版本。
+    -->
+    <lombok.version>1.18.46</lombok.version>
   </properties>
 
   <dependencies>
@@ -92,6 +105,7 @@
       <dependency>
           <groupId>org.projectlombok</groupId>
           <artifactId>lombok</artifactId>
+          <version>${lombok.version}</version>
           <scope>provided</scope>
       </dependency>
   </dependencies>
@@ -103,6 +117,23 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven-compiler-plugin.version}</version>
         <configuration>
+          <!-- 显式指定 release，避免跟随运行 Maven 的 JDK 版本 -->
+          <release>${maven.compiler.release}</release>
+          <encoding>UTF-8</encoding>
+          <!--
+            显式声明注解处理器（Lombok）。
+            JDK 23 起 javac 不再自动扫描 classpath 上的注解处理器，
+            只把 lombok 放 dependencies 里、不写这一段，用 JDK 23/25 编译就会
+            报「cannot find symbol: setUsername(...)」这类错。
+            写上 annotationProcessorPaths 后，JDK 17 和 JDK 17 以上都能正常生成 getter/setter。
+          -->
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
           <compilerArgs>
             <arg>-parameters</arg>
           </compilerArgs>

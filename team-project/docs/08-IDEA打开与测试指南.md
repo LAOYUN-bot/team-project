@@ -40,13 +40,25 @@
 
 ## 二、设置项目 SDK 为 JDK 17
 
+> **本仓库已经把 IDEA 配置钉在 17 了**：`.idea/misc.xml` 里是
+> `languageLevel="JDK_17" project-jdk-name="17"`，`.idea/compiler.xml` 里
+> `bytecodeTargetLevel target="17"`。只要 IDEA 里登记过名为 `17` 的 SDK（指向 `D:\Java17`），
+> 打开项目就是 17，不用手改。**如果 IDEA 提示 SDK 无效**，按下面第 2 步重新指一次即可。
+
 1. 菜单 **File → Project Structure…**（快捷键 `Ctrl+Alt+Shift+S`）。
 2. 左侧选 **Project**，设置：
    - **SDK**：点下拉 → 如果没有 17，选 **Add SDK → JDK…** → 选目录 `D:\Java17`
    - **Language level**：选 **17 - Sealed types, always-strict floating-point semantics**
 3. 左侧选 **Modules → a02-career-navigator → Sources** 页签，
    确认 **Language level** 也是 **17**（或 "Project default"）。
-4. 点 **Apply → OK**。
+4. 左侧选 **Project → SDK 下拉 → Edit… → 左侧 SDKs**，确认名为 `17` 的那一项
+   **JDK home path** 是 `D:\Java17`（名字必须正好是 `17`，否则 `.idea` 里的引用会失效）。
+5. 点 **Apply → OK**。
+
+> ⚠️ **不要用 JDK 25 打开这个项目**。实体类用了 Lombok，而 **JDK 23 起 javac
+> 不再自动扫描 classpath 上的注解处理器**；用 25 编会报一堆
+> `cannot find symbol: setUsername(...)`。`pom.xml` 已显式声明 `annotationProcessorPaths` 兜住这一点，
+> 但运行、调试、答辩请统一 17。
 
 ---
 
@@ -304,6 +316,7 @@ URL 填 `jdbc:h2:mem:a02`，用户名 `sa`，密码留空。
 |---|---|---|
 | 打开后**满屏红线**，`spring`/`mybatis` 均找不到 | Maven 用错了本地仓库 | 回到 **第三步**，确认 Local repository = `D:\maven-3.9.12\apache-maven-3.9.12\repo`，然后 Reload All Maven Projects |
 | 启动报 `Unsupported class file major version 69` | 用了 JDK 25 | Project Structure 与 Run Configuration 的 SDK 都改成 **17** |
+| 编译报一堆 `cannot find symbol: setUsername(...)` / `getId()` | 用 JDK 23+ 编译，Lombok 注解处理器没被自动加载 | 把 Maven/IDEA 的 JDK 换回 17；`pom.xml` 已加 `annotationProcessorPaths`，即使换 JDK 也能编过，但仍建议统一 17 |
 | 启动报 `找不到或无法加载主类` | 模块没编译 / classpath 配置错 | Build → Rebuild Project；确认 Run 配置里 "Use classpath of module" 选了 `a02-career-navigator` |
 | 启动报 **命令行太长**（Command line is too long） | Windows 命令行长度限制 | Run 配置里把 **Shorten command line** 改为 `JAR manifest` |
 | 控制台中文乱码 | 缺 UTF-8 参数 | Run 配置 VM options 加 `-Dfile.encoding=UTF-8`；另可 Settings → Editor → File Encodings 全部设为 UTF-8 |

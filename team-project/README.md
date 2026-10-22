@@ -49,11 +49,23 @@ IDE 内调接口可直接用 **`http/A02-接口测试.http`**（约 46 个请求
 
 | 项 | 要求 | 说明 |
 |---|---|---|
-| JDK | **17** | 脚本会自动查找 `A02_JAVA_HOME` / `JAVA_HOME` / `D:\Java17` |
+| JDK | **必须 17** | `pom.xml` 里 `<maven.compiler.release>17</maven.compiler.release>` 已钉死，`run.ps1` 会自动查找 `A02_JAVA_HOME` / `JAVA_HOME` / `D:\Java17` |
 | Maven | 3.9+ | 需能访问本地仓库（本机已配置离线仓库） |
 | 数据库 | **无需安装** | 默认使用 H2 内存库，零配置启动 |
 | Node.js | 18+ | 仅用于运行 `tools/` 下的自检脚本，**前端无需构建** |
 | Python | 3.7+ | 仅 MCP Server 需要（纯标准库，无需 pip 安装） |
+
+> **本机默认 JDK 是 25，直接用 `mvn` 会踩坑**，务必让 Maven 跑在 JDK 17 上：
+>
+> ```powershell
+> $env:JAVA_HOME = 'D:\Java17'
+> ```
+>
+> 原因是实体类用了 Lombok（`@Getter/@Setter`）。**JDK 23 起 javac 不再自动扫描
+> classpath 上的注解处理器**，用 JDK 25 编译虽然 `--release 17` 字节码是对的，但
+> Lombok 不生效，会报一堆 `cannot find symbol: setUsername(...)`。
+> 本仓库已在 `maven-compiler-plugin` 里显式声明 `annotationProcessorPaths`，
+> 所以 JDK 17 与 JDK 25 下都能编过；但**运行与答辩请统一用 JDK 17**（`run.ps1` 已强制）。
 
 ---
 
