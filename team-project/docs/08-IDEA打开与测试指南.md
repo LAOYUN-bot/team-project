@@ -208,23 +208,30 @@ Started A02Application in 4.3 seconds
 3. 依次执行：
 
 ```powershell
-# ① 接口契约自检 53 项（需服务已启动）
+# ① 接口契约自检 60 项（需服务已启动）
 node tools/api-contract.mjs
 
-# ② 图表库逻辑自检 868 项断言（不需要服务）
+# ② 图表库逻辑自检 862 项断言（不需要服务）
 node tools/charts-test.mjs
 
-# ③ MCP 工具契约 13 项（需服务已启动）
+# ③ 前端静态自检 6 项（不需要服务；校验接口映射 / CSS 类 / 文案 / 路由）
+node tools/ui-static-check.mjs
+
+# ④ MCP 工具契约 13 项（需服务已启动）
 cmd /c "python mcp-server\server.py < tools\mcp-requests.jsonl > target\mcp-out.jsonl 2>nul"
 node tools/mcp-verify.mjs target/mcp-out.jsonl
 
-# ④ 前端 JS 语法检查
+# ⑤ 前端 JS 语法检查（最快的兜底）
 node --check src/main/resources/static/js/app.js
 node --check src/main/resources/static/js/api.js
 node --check src/main/resources/static/js/charts.js
 ```
 
-预期结果：53 / 868 / 13 项全部通过。
+预期结果：60 / 862 / 6 / 13 项全部通过。
+
+> 另有 `tools/ui-render-check.mjs`（CDP 驱动无头浏览器逐页截图 + 抓 JS 异常），
+> **该脚本从未跑通**（沙箱下页面级 CDP 命令无返回），别拿它当验收依据。
+> 界面效果请直接在浏览器打开 `http://127.0.0.1:8080/`，用 `demo / demo1234` 登录自己看。
 
 ---
 

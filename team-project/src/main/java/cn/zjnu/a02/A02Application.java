@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <ul>
  *   <li>六步闭环 M1 感知 → M2 认知 → M3 决策 → M4 生成 → M5 执行 → M6 反馈，包结构即闭环结构；</li>
  *   <li>业务真相源在关系库（默认 H2 内存库，可切 MySQL），AI 只是能力提供方；</li>
- *   <li>AI 能力经 {@code AiChatPort} 端口访问，默认 {@code mock} 实现，无百宝箱权限亦可完整演示。</li>
+ *   <li>AI 能力经 {@code AiChatPort} → 统一模型网关访问，默认 {@code mock} 实现，无 API Key 亦可完整演示。</li>
  * </ul>
  *
  * <p>持久化分两层（课程实验一要求 Entity / Mapper / Service / Controller 分层）：

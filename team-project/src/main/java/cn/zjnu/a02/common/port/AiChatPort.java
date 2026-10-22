@@ -8,7 +8,7 @@ import java.util.function.Consumer;
  * AI 能力端口（架构文档 §7.2 AD-2）。
  *
  * <p>业务模块只依赖本接口，不直接拼接大模型 HTTP 请求。实现可切换：
- * {@code mock}（本地规则模板，离线可用）/ {@code tbox}（蚂蚁百宝箱企业版）。
+ * {@code mock}（本地规则模板，离线可用）/ {@code openai}（OpenAI 兼容协议：DeepSeek/通义/智谱/Ollama）。
  */
 public interface AiChatPort {
 
@@ -26,7 +26,7 @@ public interface AiChatPort {
      */
     StructuredResult structured(StructuredRequest request);
 
-    /** 当前提供方标识（mock / tbox）。 */
+    /** 当前提供方标识（mock / openai）。 */
     String provider();
 
     // ------------------------------------------------------------------

@@ -81,8 +81,11 @@ jobs:
           done
           echo "服务启动超时"; tail -50 target/app.log; exit 1
 
-      - name: 接口契约自检（53 项）
+      - name: 接口契约自检（60 项）
         run: node tools/api-contract.mjs http://127.0.0.1:8080
+
+      - name: RAG 效果评估（Recall@K + 拒答行为）
+        run: node tools/rag-eval.mjs http://127.0.0.1:8080
 
       - name: 失败时归档日志
         if: failure()
@@ -111,7 +114,7 @@ jobs:
           node --check src/main/resources/static/js/api.js
           node --check src/main/resources/static/js/app.js
 
-      - name: 图表库逻辑自检（868 项断言）
+      - name: 图表库逻辑自检（862 项断言）
         run: node tools/charts-test.mjs
 
   mcp:

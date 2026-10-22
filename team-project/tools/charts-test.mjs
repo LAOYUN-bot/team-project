@@ -93,10 +93,13 @@ const dims = [
   const lines = nodes.filter((n) => n.tag === 'line');
   const circles = nodes.filter((n) => n.tag === 'circle');
   const texts = nodes.filter((n) => n.tag === 'text');
+  const tspans = nodes.filter((n) => n.tag === 'tspan');
   assert(polys.length === 6, `雷达图：多边形数量应为 6（4 网格环 + 上一版本 + 当前），实际 ${polys.length}`);
   assert(lines.length === 8, `雷达图：轴线数量应为 8，实际 ${lines.length}`);
   assert(circles.length === 8, `雷达图：顶点数量应为 8，实际 ${circles.length}`);
-  assert(texts.length === 16, `雷达图：标签+分值文本应为 16，实际 ${texts.length}`);
+  // 维度标签是 8 个 <text>，分值以嵌套 <tspan> 渲染在同一行（避免标签与分值互相压字）
+  assert(texts.length === 8, `雷达图：维度标签文本应为 8，实际 ${texts.length}`);
+  assert(tspans.length === 8, `雷达图：分值 tspan 应为 8，实际 ${tspans.length}`);
 
   polys.forEach((p, i) => {
     assertFiniteNumbers(p.attrs.points, `雷达图多边形#${i}.points`);
@@ -107,9 +110,10 @@ const dims = [
     });
   });
   nodes.forEach((n, i) => checkAttributes(n, `雷达图节点#${i}`));
-  // 分值应被正确渲染
-  const scoreTexts = texts.map((t) => t.textContent);
+  // 分值应被正确渲染（作为 label 内的 tspan）
+  const scoreTexts = tspans.map((t) => t.textContent);
   assert(scoreTexts.includes('82.8'), '雷达图：未渲染出分值 82.8');
+  assert(scoreTexts.includes('51.9'), '雷达图：未渲染出分值 51.9');
 }
 
 // 边界：空维度

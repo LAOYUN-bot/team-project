@@ -10,17 +10,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import cn.zjnu.a02.ai.AiService;
-import cn.zjnu.a02.ai.adapter.TboxAiAdapter;
 import cn.zjnu.a02.common.api.ApiResponse;
 import cn.zjnu.a02.common.db.Db;
 import cn.zjnu.a02.platform.security.AuthContext;
 import cn.zjnu.a02.platform.security.RequireRole;
 
 /**
- * 平台可观测与合规接口（NFR-4 可追溯 / FR-7.5 AI 伦理）。
+ * 平台可观测与合规接口（NFR-4 可追溯 / FR-7.5 AI 伦理 / NFR-8 成本观测）。
  *
- * <p>为答辩与企业专项材料提供**运行时证据**：
- * AI 生成日志（提示词版本、重试、降级）、审计日志、提示词仓库、系统配置、隐私处理说明。
+ * <p>为课程交付与答辩提供**运行时证据**：
+ * 模型网关状态、调用日志与成本、审计日志、提示词仓库、系统配置、隐私处理说明。
  */
 @RestController
 @RequestMapping("/api/platform")
@@ -28,38 +27,34 @@ public class PlatformController {
 
     private final Db db;
     private final AiService aiService;
-    private final TboxAiAdapter tboxAdapter;
 
-    public PlatformController(Db db, AiService aiService, TboxAiAdapter tboxAdapter) {
+    public PlatformController(Db db, AiService aiService) {
         this.db = db;
         this.aiService = aiService;
-        this.tboxAdapter = tboxAdapter;
     }
 
-    /** AI 运行状态与平台适配度证据（企业专项材料①的运行时部分）。 */
+    /** 模型网关状态与分层策略（v2.0：多模型切换与降级的运行时证据）。 */
     @GetMapping("/ai-status")
     public ApiResponse<Map<String, Object>> aiStatus() {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("provider", aiService.provider());
-        result.put("tboxConfigured", aiService.tboxConfigured());
-        result.put("fallbackEnabled", true);
-        result.put("tboxConfig", tboxAdapter.describeConfig());
-        result.put("degradePolicy", "主通道失败时自动降级为本地模板，并在响应中标记 degraded=true，"
-                + "前端展示「AI 已降级为本地模板」提示，演示不中断");
-        result.put("models", List.of("百灵（规划）", "通义千问", "DeepSeek"));
+        Map<String, Object> result = new LinkedHashMap<>(aiService.gatewayInfo());
+        result.put("models", List.of("DeepSeek-V3（主力，云端）", "通义 qwen-plus（备用）",
+                "智谱 glm-4（备用）", "Ollama qwen2.5:7b（本地，零费用）"));
+        result.put("switchHint", "改 a02.ai.provider / a02.ai.tier 即可切换通道与模型，业务代码不改");
         return ApiResponse.ok(result);
     }
 
-    /** AI 生成日志：每次生成的场景、提示词版本、耗时、重试次数、是否降级。 */
+    /** 模型调用日志（NFR-8）：每次调用的 token / 耗时 / 重试 / 缓存 / 降级。 */
     @GetMapping("/ai-logs")
     public ApiResponse<List<Map<String, Object>>> aiLogs(@RequestParam(defaultValue = "30") int limit) {
-        return ApiResponse.ok(db.camelList("SELECT id, scene, provider, model, prompt_version, latency_ms,"
-                + " retry_count, degraded, created_at FROM ai_generation_log"
-                + " WHERE user_id=? OR user_id IS NULL ORDER BY id DESC LIMIT ?",
+        return ApiResponse.ok(db.camelList(
+                "SELECT id, scene, provider, model, prompt_version, prompt_tokens, completion_tokens,"
+                        + " total_tokens, latency_ms, success, error_code, cache_hit, degraded,"
+                        + " retry_count, cost_cny, created_at FROM llm_call_log"
+                        + " WHERE user_id=? OR user_id IS NULL ORDER BY id DESC LIMIT ?",
                 AuthContext.userId(), Math.max(1, Math.min(100, limit))));
     }
 
-    /** 提示词仓库与版本（架构文档 §7.3「提示词即行为代码」）。 */
+    /** 提示词仓库与版本（提示词是「AI 的行为代码」）。 */
     @GetMapping("/prompts")
     public ApiResponse<Map<String, Object>> prompts() {
         return ApiResponse.ok(aiService.promptCatalog());
@@ -73,7 +68,7 @@ public class PlatformController {
                 + " FROM audit_log ORDER BY id DESC LIMIT ?", Math.max(1, Math.min(100, limit))));
     }
 
-    /** 系统配置（雷达权重、衰减因子等，可截图给评委看）。 */
+    /** 系统配置（雷达权重、模型分层、限流与成本参数，可截图展示）。 */
     @GetMapping("/config")
     public ApiResponse<List<Map<String, Object>>> config() {
         return ApiResponse.ok(db.camelList("SELECT cfg_key, cfg_value, remark FROM sys_config ORDER BY cfg_key"));
@@ -90,21 +85,22 @@ public class PlatformController {
                 "口令 BCrypt(cost=10) 入库",
                 "手机号/邮箱 AES-GCM 加密列存储，接口只回掩码",
                 "传模型前执行脱敏管道（姓名→用户A、手机→掩码、院校→泛化）",
+                "开发期默认走本地 Mock/Ollama，敏感数据不出内网",
                 "AI 产出必须经 Schema 校验与业务规则二次校验后才落库",
                 "每条 AI 消息标记 is_ai_generated，界面固定展示 AI 标识",
                 "提供数据导出（GET /api/users/me/data）与级联删除（DELETE /api/users/me/data）"));
         result.put("ethics", List.of(
                 "算法偏见：提示词显式禁止因性别/年龄/地域/院校产生差异建议",
-                "防过度依赖：关键建议附理由与来源，界面提示「仅供参考」",
+                "防过度依赖：关键建议附理由与来源，界面提示「仅供参考」；RAG 上下文不足时拒答",
                 "透明性：对话界面固定 AI 标识，能力边界写入人设提示词",
-                "责任归属：所有生成写 ai_generation_log，可追溯模型与提示词版本",
+                "责任归属：所有生成写 llm_call_log（模型/提示词版本/token/错误码），可追溯",
                 "合规数据：仅使用公开资料改写与自构造模拟数据"));
         result.put("userConsent", db.camel(db.one("SELECT * FROM user_consent WHERE user_id=?",
                 AuthContext.userId())));
         return ApiResponse.ok(result);
     }
 
-    /** 闭环总览（答辩开场用：六步闭环的数据量证据）。 */
+    /** 闭环总览（答辩开场用：六步闭环 + M7 集成的数据量证据）。 */
     @GetMapping("/overview")
     public ApiResponse<Map<String, Object>> overview() {
         long userId = AuthContext.userId();
@@ -127,13 +123,16 @@ public class PlatformController {
         steps.put("M5 执行", Map.of(
                 "tasks", db.count("SELECT COUNT(*) FROM learning_task WHERE user_id=?", userId),
                 "simulationSessions", db.count("SELECT COUNT(*) FROM simulation_session WHERE user_id=?", userId),
-                "evaluations", db.count("SELECT COUNT(*) FROM evaluation WHERE user_id=?", userId),
-                "mcpCalls", db.count("SELECT COUNT(*) FROM mcp_tool_log")));
+                "evaluations", db.count("SELECT COUNT(*) FROM evaluation WHERE user_id=?", userId)));
         steps.put("M6 反馈", Map.of(
                 "growthSnapshots", db.count("SELECT COUNT(*) FROM growth_record WHERE user_id=?", userId),
                 "incentives", db.count("SELECT COUNT(*) FROM incentive_log WHERE user_id=?", userId),
                 "alerts", db.count("SELECT COUNT(*) FROM deviation_alert WHERE user_id=?", userId)));
+        steps.put("M7 集成与合规", Map.of(
+                "kbChunks", db.count("SELECT COUNT(*) FROM kb_chunk"),
+                "llmCalls", db.count("SELECT COUNT(*) FROM llm_call_log"),
+                "refusals", db.count("SELECT COUNT(*) FROM kb_retrieval_log WHERE refused=1")));
         return ApiResponse.ok(Map.of("steps", steps,
-                "note", "以上数字均为真实数据库统计，可用于验证「感知→反馈」闭环确实跑通。"));
+                "note", "以上数字均为真实数据库统计，可用于验证「感知→反馈」闭环与 M7 集成层确实跑通。"));
     }
 }

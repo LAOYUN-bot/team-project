@@ -99,7 +99,7 @@ public class AgentChatService {
         result.put("messageId", messageId);
         result.put("content", buffer.toString());
         result.put("provider", aiService.provider());
-        result.put("tboxConfigured", aiService.tboxConfigured());
+        result.put("remoteConfigured", aiService.remoteConfigured());
         result.put("disclaimer", "以上内容由 AI 生成，仅供参考，请结合自身情况核实。");
         return result;
     }

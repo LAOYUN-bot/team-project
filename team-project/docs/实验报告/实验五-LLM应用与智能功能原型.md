@@ -26,9 +26,9 @@
 |---|---|
 | JDK | 17 |
 | 后端 | Spring Boot 4.0.8 |
-| AI 通道 | `AiChatPort` 端口 + 两个适配器：**MockAiAdapter**（本地规则模板，离线可跑）/ **TboxAiAdapter**（百宝箱企业版，需 API Key） |
+| AI 通道 | `AiChatPort` 端口 + 统一网关：**MockAiAdapter**（本地规则模板，离线可跑）/ **OpenAiCompatibleAiAdapter**（DeepSeek/通义/智谱/Ollama，OpenAI 兼容协议） |
 | 默认配置 | `a02.ai.provider=mock` —— **没有大模型 Key 也能完整演示**（架构上的降级设计） |
-| 联网可选 | 配置 `TBOX_API_KEY` / `TBOX_AGENT_ID` 后一键切换真实平台 |
+| 联网可选 | 配置 `DEEPSEEK_API_KEY` + `AI_TIER=demo` + `AI_PROVIDER=openai` 即切换真实模型 |
 
 ---
 
@@ -69,7 +69,7 @@
 
 📷 **截图 1**：`resources/prompts/` 目录（8 个提示词文件）
 📷 **截图 2**：`persona.txt` 的 Guard 段落
-📷 **截图 3**：「平台与 AI 伦理」页的提示词仓库（显示每个提示词的版本号与字数）
+📷 **截图 3**：`GET /api/platform/prompts` 的返回体（每个提示词的版本号与字数）
 
 ### 3.2 步骤二：接口调用 —— 封装 `ask()` 等价物
 
@@ -95,10 +95,10 @@ public class MockAiAdapter extends AbstractStructuredAiAdapter {
 }
 
 @Component
-public class TboxAiAdapter extends AbstractStructuredAiAdapter {
+public class OpenAiCompatibleAiAdapter extends AbstractStructuredAiAdapter {
     private String invoke(String prompt, Map<String, Object> context, String scene) {
         if (!configured()) {
-            throw new BizException(ErrorCode.UPSTREAM_UNAVAILABLE, "百宝箱企业版未配置…");
+            throw new LlmException(LlmException.Code.NOT_CONFIGURED, "云端模型未配置 API Key…");
         }
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/v1/agent/invoke"))
@@ -118,8 +118,8 @@ public StructuredResult structured(String scene, Long userId, Map<String,Object>
     rateLimiter.acquire(userId);                       // 保护 Token 配额
     Map<String, Object> safeContext = redactor.redact(context);   // 传模型前脱敏
     ...
-    if ("tbox".equals(provider())) {
-        try { result = tboxAdapter.structured(request); }
+    if ("openai".equals(provider())) {
+        try { result = remoteAdapter.structured(request); }
         catch (BizException e) {
             if (!fallbackEnabled) throw e;
             result = mockAdapter.structured(...);      // 降级，演示不中断
@@ -133,7 +133,7 @@ public StructuredResult structured(String scene, Long userId, Map<String,Object>
 
 📷 **截图 4**：`AiChatPort` 接口代码
 📷 **截图 5**：`AiService` 中的降级分支
-📷 **截图 6**：「平台与 AI 伦理」页的 **AI 通道状态**卡片（provider / 是否已配置 / 降级策略）
+📷 **截图 6**：`GET /api/platform/ai-status` 的返回体（provider / 是否已配置 / 降级策略）
 
 ### 3.3 步骤三：结构化输出契约（**本实验最有价值的部分**）
 
@@ -215,12 +215,12 @@ RAG 链路（本项目实现，向量托管于平台知识库，自建侧保留�
 | 1 | 3–5 年职业路径生成 | `path_v4` | ③ 职业路径 → 生成路径 |
 | 2 | 周学习单元拆解 | `unit_v3` | ③ 职业路径 → 阶段展开 |
 | 3 | 行业趋势分析（带来源） | `trend_v2` | ⑦ 职业知识图谱 → 生成趋势分析 |
-| 4 | **职场场景角色扮演 + 评分** | `coach_v2` / `score_v3` | ⑤ 职场模拟训练 |
-| 5 | **角色化对话（人设 + 记忆 + 共情）** | `persona_v3` | ⑥ AI 伙伴对话 |
-| 6 | 激励文案 / 简历抽取 | `incentive_v2` / `resume_v2` | ② 成长面板 / ① 建档 |
+| 4 | **职场场景角色扮演 + 评分** | `coach_v2` / `score_v3` | ⑤ 情景练习 |
+| 5 | **角色化对话（人设 + 记忆 + 共情）** | `persona_v3` | ⑥ 职业伙伴 |
+| 6 | 激励文案 / 简历抽取 | `incentive_v2` / `resume_v2` | ② 我的能力 / ① 建档 |
 
-📷 **截图 12**：「AI 伙伴对话」页（左：对话；右：**注入给模型的结构化上下文**）
-📷 **截图 13**：「职场模拟训练」评分卡片（逐维得分 + 改进建议）
+📷 **截图 12**：「职业伙伴」对话页 + `GET /api/agent/context` 返回的**注入给模型的结构化上下文**
+📷 **截图 13**：「情景练习」评分卡片（逐维得分 + 改进建议）
 📷 **截图 14**：`docs/00-运行与演示指南.md` 的 5 分钟演示脚本
 
 ### 3.6 步骤六：反思 —— 幻觉与错误案例及应对
@@ -265,7 +265,7 @@ java -cp "target/classes;target/test-classes;$(Get-Content target/cp-test.txt -R
 | 兜底模板可用性 | 兜底结果仍满足「≥4 阶段 + 每阶段有产出物」 | ✅ 单测通过 |
 | 无来源不外答 | 趋势场景 `sources` 非空断言 | ✅ |
 | 提示注入防护 | 5 类注入表述全部拒绝，且不泄露系统提示词 | ✅ |
-| 降级不中断演示 | 配置 `provider=tbox` 但无 Key → 自动降级 Mock 并标记 degraded | ✅ |
+| 降级不中断演示 | 配置 `provider=openai` 但无 Key → 自动降级 Mock 并标记 degraded | ✅ |
 | AI 生成可追溯 | `ai_generation_log` 记录场景/提供方/提示词版本/耗时/重试/降级 | ✅ 界面可见 |
 | **模型答错案例记录** | 见 §3.6 表格 | ✅ 6 类 |
 

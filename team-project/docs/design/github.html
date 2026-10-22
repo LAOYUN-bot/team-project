@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard</title>
+<style>
+:root{
+  --canvas:#f6f8fa;
+  --canvas-inset:#ffffff;
+  --border:#d1d9e0;
+  --border-muted:#d1d9e080;
+  --fg:#1f2328;
+  --fg-muted:#59636e;
+  --accent:#0969da;
+  --accent-subtle:#ddf4ff;
+  --success:#1a7f37;
+  --success-btn:#1f883d;
+  --success-btn-hover:#1a7f37;
+  --danger:#d1242f;
+  --attention:#9a6700;
+  --done:#8250df;
+  --btn-bg:#f6f8fa;
+  --shadow:0 1px 0 rgba(31,35,40,.04);
+  --radius:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;
+  background:var(--canvas);color:var(--fg);font-size:14px;line-height:1.5;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- 顶栏 ---------- */
+.header{background:var(--canvas-inset);border-bottom:1px solid var(--border);
+  padding:0 24px;height:60px;display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:10}
+.mark{width:32px;height:32px;border-radius:50%;background:var(--fg);color:#fff;
+  display:grid;place-items:center;font-weight:700;font-size:15px;flex:none}
+.search{width:280px;display:flex;align-items:center;gap:8px;background:var(--canvas);
+  border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;
+  color:var(--fg-muted);font-size:13px;cursor:text}
+.search input{border:0;outline:0;background:transparent;flex:1;font-size:13px;color:var(--fg)}
+.search kbd{border:1px solid var(--border);border-radius:4px;font-size:11px;
+  padding:0 5px;color:var(--fg-muted);background:var(--canvas-inset)}
+.header nav{display:flex;gap:4px;margin-left:4px}
+.header nav a{color:var(--fg);font-weight:600;font-size:14px;padding:6px 10px;border-radius:var(--radius)}
+.header nav a:hover{background:var(--canvas);text-decoration:none}
+.header .right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.icon-btn{border:1px solid transparent;background:transparent;cursor:pointer;color:var(--fg-muted);
+  font-size:16px;padding:5px 8px;border-radius:var(--radius)}
+.icon-btn:hover{background:var(--canvas)}
+.avatar{width:30px;height:30px;border-radius:50%;flex:none;cursor:pointer;
+  background:conic-gradient(from 210deg,#8250df,#0969da,#1a7f37,#bf8700,#8250df);
+  box-shadow:inset 0 0 0 2px #fff}
+
+/* ---------- 页面头（仓库式 tabs） ---------- */
+.pagehead{background:var(--canvas-inset);border-bottom:1px solid var(--border);padding:0 24px}
+.pagehead .crumbs{padding-top:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pagehead .crumbs .owner{color:var(--fg-muted)}
+.pagehead .crumbs .name{font-size:18px;font-weight:600;color:var(--accent)}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);
+  border-radius:999px;padding:1px 9px;font-size:12px;color:var(--fg-muted);background:var(--canvas)}
+.head-actions{display:flex;gap:8px;margin-left:auto}
+.tabs{display:flex;gap:2px;margin-top:14px}
+.tabs .tab{display:flex;align-items:center;gap:7px;padding:8px 14px;font-size:14px;
+  color:var(--fg-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs .tab:hover{color:var(--fg);border-bottom-color:var(--border)}
+.tabs .tab.active{color:var(--fg);font-weight:600;border-bottom-color:#fd8c73}
+.counter{background:#afb8c133;border-radius:999px;padding:0 7px;font-size:12px;
+  font-weight:600;color:var(--fg)}
+
+/* ---------- 布局 ---------- */
+.container{max-width:1280px;margin:0 auto;padding:24px;display:grid;
+  grid-template-columns:minmax(0,1fr) 296px;gap:24px}
+@media(max-width:900px){.container{grid-template-columns:1fr}}
+
+.box{background:var(--canvas-inset);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow)}
+.box + .box{margin-top:16px}
+.box-head{padding:12px 16px;border-bottom:1px solid var(--border-muted);
+  display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.box-head .muted{color:var(--fg-muted);font-weight:400}
+.box-body{padding:16px}
+.muted{color:var(--fg-muted)}
+.small{font-size:12px}
+
+/* ---------- 按钮 ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);
+  background:var(--btn-bg);color:var(--fg);border-radius:var(--radius);
+  padding:5px 12px;font-size:13px;font-weight:500;cursor:pointer;line-height:20px;
+  transition:.15s;user-select:none}
+.btn:hover{background:#eff1f3;border-color:#d1d9e0}
+.btn-primary{background:var(--success-btn);border-color:rgba(31,35,40,.15);color:#fff}
+.btn-primary:hover{background:var(--success-btn-hover)}
+.btn-sm{padding:3px 10px;font-size:12px}
+
+/* ---------- 标签 ---------- */
+.label{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;
+  font-weight:500;line-height:18px}
+.label.blue{background:var(--accent-subtle);color:var(--accent)}
+.label.green{background:#dafbe1;color:var(--success)}
+.label.yellow{background:#fff8c5;color:var(--attention)}
+.label.purple{background:#fbefff;color:var(--done)}
+.label.red{background:#ffebe9;color:var(--danger)}
+.label.gray{border:1px solid var(--border);color:var(--fg-muted)}
+
+/* ---------- 列表行 ---------- */
+.rows .row{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;
+  border-top:1px solid var(--border-muted)}
+.rows .row:first-child{border-top:0}
+.rows .row:hover{background:var(--canvas)}
+.state-dot{width:16px;height:16px;border-radius:50%;flex:none;margin-top:3px;
+  display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700}
+.state-dot.open{background:var(--success)}
+.state-dot.closed{background:var(--done)}
+.state-dot.draft{background:var(--fg-muted)}
+.row .t{font-weight:600;font-size:14px}
+.row .t:hover{color:var(--accent);cursor:pointer}
+.row .meta{font-size:12px;color:var(--fg-muted);margin-top:2px}
+.row .right-tags{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+
+/* ---------- 统计条 ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--canvas-inset);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;box-shadow:var(--shadow)}
+.stat .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--fg-muted)}
+.stat .delta{font-size:12px;font-weight:600;margin-left:6px}
+.delta.up{color:var(--success)}
+.delta.down{color:var(--danger)}
+
+/* ---------- 贡献热力图 ---------- */
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,10px);
+  gap:3px;padding:4px 0}
+.heat i{width:10px;height:10px;border-radius:2px;background:#ebedf0}
+.heat i[data-l="1"]{background:#9be9a8}
+.heat i[data-l="2"]{background:#40c463}
+.heat i[data-l="3"]{background:#30a14e}
+.heat i[data-l="4"]{background:#216e39}
+.heat i:hover{outline:1px solid rgba(31,35,40,.35)}
+.heat-legend{display:flex;align-items:center;gap:4px;justify-content:flex-end;
+  font-size:11px;color:var(--fg-muted);margin-top:8px}
+.heat-legend i{width:10px;height:10px;border-radius:2px}
+
+/* ---------- 进度条 ---------- */
+.lang-bar{display:flex;height:8px;border-radius:6px;overflow:hidden;margin:10px 0 8px}
+.lang-bar i{display:block;height:100%}
+.lang-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--fg-muted)}
+.lang-legend b{color:var(--fg);font-weight:600}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+
+/* ---------- 侧栏 ---------- */
+.sidebar .box .box-body{padding-top:8px}
+.side-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--border-muted);font-size:13px}
+.side-row:last-child{border-bottom:0}
+.topic{display:inline-block;background:var(--accent-subtle);color:var(--accent);
+  border-radius:999px;padding:1px 10px;font-size:12px;margin:0 5px 6px 0;cursor:pointer}
+.topic:hover{background:var(--accent);color:#fff}
+
+/* ---------- 页脚 ---------- */
+.footer{max-width:1280px;margin:8px auto 0;padding:24px;border-top:1px solid var(--border-muted);
+  display:flex;gap:24px;font-size:12px;color:var(--fg-muted);flex-wrap:wrap}
+
+.flash{border:1px solid transparent;border-radius:var(--radius);padding:10px 16px;
+  font-size:13px;margin-bottom:16px;display:none}
+.flash.success{display:block;background:#dafbe1;border-color:#aceebb;color:var(--success)}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<header class="header">
+  <div class="mark">◆</div>
+  <div class="search"><span>🔍</span><input placeholder="搜索或跳转…" /><kbd>/</kbd></div>
+  <nav>
+    <a href="#">概览</a>
+    <a href="#">仓库</a>
+    <a href="#">动态</a>
+  </nav>
+  <div class="right">
+    <button class="icon-btn">＋</button>
+    <button class="icon-btn">🔔</button>
+    <div class="avatar"></div>
+  </div>
+</header>
+
+<!-- 页面头 -->
+<div class="pagehead">
+  <div style="max-width:1280px;margin:0 auto">
+    <div class="crumbs">
+      <span class="owner">workspace /</span>
+      <span class="name">dashboard</span>
+      <span class="chip">Public</span>
+      <div class="head-actions">
+        <button class="btn btn-sm" id="starBtn">☆ Star <span class="counter" id="starCount">128</span></button>
+        <button class="btn btn-sm">⑂ Fork <span class="counter">32</span></button>
+        <button class="btn btn-sm btn-primary">＋ New</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-t="code">⌄ 代码</div>
+      <div class="tab" data-t="issues">◉ 议题 <span class="counter">4</span></div>
+      <div class="tab" data-t="pr">⑂ 合并请求 <span class="counter">2</span></div>
+      <div class="tab" data-t="act">▶ 动作</div>
+      <div class="tab" data-t="ins">◔ 洞察</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- 主列 -->
+  <main>
+    <div class="flash success" id="flash">✓ 操作成功。</div>
+
+    <!-- 统计 -->
+    <div class="stats">
+      <div class="stat"><div class="n">1,284<span class="delta up">▲ 12%</span></div><div class="l">提交次数</div></div>
+      <div class="stat"><div class="n">96<span class="delta up">▲ 4%</span></div><div class="l">合并请求</div></div>
+      <div class="stat"><div class="n">23<span class="delta down">▼ 8%</span></div><div class="l">待办议题</div></div>
+      <div class="stat"><div class="n">99.9%</div><div class="l">构建通过率</div></div>
+    </div>
+
+    <!-- 最近动态列表 -->
+    <div class="box">
+      <div class="box-head">最近动态 <span class="muted">· 共 24 条</span>
+        <span style="margin-left:auto"><button class="btn btn-sm">筛选 ▾</button></span>
+      </div>
+      <div class="rows">
+        <div class="row">
+          <div class="state-dot open">✓</div>
+          <div>
+            <div class="t">修复深色模式下边框对比度问题 <span class="label green">bug</span> <span class="label blue">UI</span></div>
+            <div class="meta">#1042 · 由 demo 于 2 小时前开启</div>
+          </div>
+          <div class="right-tags"><span class="label gray">优先级：高</span></div>
+        </div>
+        <div class="row">
+          <div class="state-dot closed">✕</div>
+          <div>
+            <div class="t">升级图表渲染管线 <span class="label purple">enhancement</span></div>
+            <div class="meta">#1039 · 已合并 · 昨天</div>
+          </div>
+          <div class="right-tags"><span class="label gray">+212 −87</span></div>
+        </div>
+        <div class="row">
+          <div class="state-dot open">✓</div>
+          <div>
+            <div class="t">新增键盘快捷键支持 <span class="label blue">feature</span></div>
+            <div class="meta">#1036 · 由 demo 于 3 天前开启</div>
+          </div>
+          <div class="right-tags"><span class="label yellow">review</span></div>
+        </div>
+        <div class="row">
+          <div class="state-dot draft">●</div>
+          <div>
+            <div class="t">草稿：重构状态管理模块 <span class="label gray">refactor</span></div>
+            <div class="meta">#1031 · 草稿 · 上周</div>
+          </div>
+          <div class="right-tags"><span class="label red">blocked</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 热力图 -->
+    <div class="box">
+      <div class="box-head">贡献活动 <span class="muted">· 近一年</span></div>
+      <div class="box-body">
+        <div class="heat" id="heat"></div>
+        <div class="heat-legend">少
+          <i style="background:#ebedf0"></i><i style="background:#9be9a8"></i>
+          <i style="background:#40c463"></i><i style="background:#30a14e"></i>
+          <i style="background:#216e39"></i> 多
+        </div>
+      </div>
+    </div>
+
+    <!-- 语言占比 -->
+    <div class="box">
+      <div class="box-head">语言构成</div>
+      <div class="box-body">
+        <div class="lang-bar">
+          <i style="width:52%;background:#f1e05a"></i>
+          <i style="width:27%;background:#3572A5"></i>
+          <i style="width:13%;background:#e34c26"></i>
+          <i style="width:8%;background:#563d7c"></i>
+        </div>
+        <div class="lang-legend">
+          <span><i class="dot" style="background:#f1e05a"></i><b>JavaScript</b> 52.1%</span>
+          <span><i class="dot" style="background:#3572A5"></i><b>Python</b> 27.3%</span>
+          <span><i class="dot" style="background:#e34c26"></i><b>HTML</b> 12.9%</span>
+          <span><i class="dot" style="background:#563d7c"></i><b>CSS</b> 7.7%</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 侧栏 -->
+  <aside class="sidebar">
+    <div class="box">
+      <div class="box-head">关于</div>
+      <div class="box-body">
+        <p class="small muted" style="margin-bottom:10px">一个轻量的个人工作台。</p>
+        <div style="margin-bottom:12px">
+          <span class="topic">frontend</span><span class="topic">dashboard</span>
+          <span class="topic">ui</span><span class="topic">toolkit</span>
+        </div>
+        <div class="side-row"><span class="muted">⭐ 星标</span><b>128</b></div>
+        <div class="side-row"><span class="muted">👁 关注</span><b>46</b></div>
+        <div class="side-row"><span class="muted">⑂ 复刻</span><b>32</b></div>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-head">发布版本</div>
+      <div class="box-body">
+        <div class="side-row"><a href="#">v2.4.1</a><span class="label green">Latest</span></div>
+        <div class="side-row"><a href="#">v2.4.0</a><span class="small muted">10 月 12 日</span></div>
+        <div class="side-row"><a href="#">v2.3.2</a><span class="small muted">9 月 28 日</span></div>
+        <div class="side-row"><a href="#" style="margin-left:auto">+ 11 个版本 →</a></div>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-head">贡献者 <span class="counter">8</span></div>
+      <div class="box-body" style="display:flex;flex-wrap:wrap;gap:8px" id="avatars"></div>
+    </div>
+  </aside>
+</div>
+
+<footer class="footer">
+  <span>© 2026</span><a href="#">条款</a><a href="#">隐私</a><a href="#">安全</a>
+  <a href="#">状态</a><a href="#">文档</a><a href="#">联系</a>
+</footer>
+
+<script>
+/* 生成 52 周热力图 */
+const heat = document.getElementById('heat');
+for(let w=0; w<52; w++){
+  for(let d=0; d<7; d++){
+    const i = document.createElement('i');
+    const r = Math.random();
+    i.dataset.l = r<.35?0 : r<.6?1 : r<.78?2 : r<.92?3 : 4;
+    heat.appendChild(i);
+  }
+}
+
+/* 贡献者头像 */
+const av = document.getElementById('avatars');
+const hues = [210,262,145,25,330,190,80,300];
+hues.forEach((h,i)=>{
+  const a = document.createElement('div');
+  a.style.cssText = `width:32px;height:32px;border-radius:50%;cursor:pointer;
+    background:linear-gradient(135deg,hsl(${h},70%,72%),hsl(${h+40},65%,55%));
+    box-shadow:inset 0 0 0 1px rgba(27,31,36,.15)`;
+  a.title = 'contributor-'+(i+1);
+  av.appendChild(a);
+});
+
+/* Star 切换 */
+const starBtn = document.getElementById('starBtn');
+const starCount = document.getElementById('starCount');
+let starred = false;
+starBtn.addEventListener('click', ()=>{
+  starred = !starred;
+  starCount.textContent = 128 + (starred?1:0);
+  starBtn.firstChild.textContent = starred ? '★ Starred ' : '☆ Star ';
+  flash(starred ? '已添加星标。' : '已取消星标。');
+});
+
+/* Tabs 切换 */
+document.querySelectorAll('#tabs .tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+
+/* 顶部搜索聚焦 */
+document.querySelector('.search').addEventListener('click', e=>{
+  e.currentTarget.querySelector('input').focus();
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === '/' && document.activeElement.tagName !== 'INPUT'){
+    e.preventDefault();
+    document.querySelector('.search input').focus();
+  }
+});
+
+/* 提示条 */
+function flash(msg){
+  const f = document.getElementById('flash');
+  f.textContent = '✓ ' + msg;
+  f.classList.add('success');
+  clearTimeout(f._t);
+  f._t = setTimeout(()=>f.classList.remove('success'), 2400);
+}
+</script>
+</body>
+</html>

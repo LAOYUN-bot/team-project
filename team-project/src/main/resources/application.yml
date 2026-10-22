@@ -42,19 +42,65 @@ mybatis:
     cache-enabled: false
 
 a02:
-  # AI 能力开关（架构文档 §7.2 AD-2）：mock = 本地规则/模板，无需百宝箱权限
-  # tbox = 蚂蚁百宝箱企业版（需 TBOX_API_KEY / TBOX_AGENT_ID）
+  # ==========================================================================
+  # AI 能力层（v2.0：自建统一模型网关，不再依赖任何指定商业平台）
+  # ==========================================================================
   ai:
+    # 通道：mock = 本地规则模板（离线可跑、零成本）；openai = OpenAI 兼容协议
+    # DeepSeek / 通义千问 / 智谱 / Ollama 都兼容该协议，差异只在 base-url + model
     provider: mock
+    # 模型分层（v2.0 §3.4.1）：dev 走本地 Ollama（零费用），standard/demo 走云端
+    tier: ${AI_TIER:dev}
     fallback-enabled: true
     max-retry: 2
     temperature:
-      path: 0.3
-      incentive: 0.8
-    tbox:
-      base-url: https://api.tbox.cn
-      api-key: ${TBOX_API_KEY:}
-      agent-id: ${TBOX_AGENT_ID:}
+      path: 0.3          # 路径生成求稳定
+      incentive: 0.8     # 激励文案求多样
+
+    # 本机 Ollama（OpenAI 兼容端点）：开发期主力，免费无速率限制
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434/v1}
+
+    # 云端 OpenAI 兼容端点（DeepSeek / 通义 / 智谱 任选其一）
+    openai:
+      base-url: ${OPENAI_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${DEEPSEEK_API_KEY:}
+
+    # 向量化：local = 内置确定性向量（离线可用）；openai = 云端 embedding
+    embedding:
+      provider: ${EMBEDDING_PROVIDER:local}
+      model: ${EMBEDDING_MODEL:text-embedding-v3}
+
+    # NFR-8 限流与费用防护（v2.0 §3.4.2）
+    limit:
+      global-rpm: 22        # 供应商 30 RPM 时留 25% 余量
+      user-rpm: 8
+      daily-calls: 1500     # 日调用量硬上限（防调试循环）
+      alert-ratio: 0.8      # 用量达 80% 打告警日志
+      apply-to-mock: false  # Mock 通道不消耗额度，默认不限流；演练时置 true
+
+    # 二级缓存：相同场景 + 相同上下文直接命中，减少调用次数
+    cache:
+      enabled: true
+      ttl-seconds: 600
+
+    # Mock 行为参数（离线演示用）
+    mock:
+      chaos: ${MOCK_CHAOS:false}   # true 时首次结构化输出缺字段，演示校验重试
+      stream-delay-ms: 18
+
+  # ==========================================================================
+  # RAG 自建管线（v2.0 §3.3.2 / FR-7.2）
+  # ==========================================================================
+  rag:
+    chunk:
+      size: 400          # 目标块大小（文档要求 300-500 字）
+      overlap: 60        # 块间重叠（文档要求 50-80 字）
+    top-k: 5
+    min-score: 0.12      # 余弦相关度阈值（第一判据）
+    min-coverage: 0.3    # 问题实词在片段中的覆盖率阈值（第二判据，防跑题强答）
+    auto-ingest: true    # 启动时自动切块 + 向量化
+
   security:
     jwt:
       # Demo 用固定密钥；生产必须走环境变量（架构文档 §11.2）
@@ -63,8 +109,10 @@ a02:
     crypto:
       # 敏感字段 AES-GCM 列加密密钥（Demo 固定；生产走环境变量）
       field-key: ${FIELD_AES_KEY:a02-demo-field-key-32bytes-min!!}
-  ratelimit:
-    ai-per-minute: 30
+
+  # 仅供自建 MCP Server（P2 可选扩展）调用的只读内部 API 令牌
+  internal:
+    service-token: ${A02_SERVICE_TOKEN:a02-internal-demo-token}
 
 logging:
   level:

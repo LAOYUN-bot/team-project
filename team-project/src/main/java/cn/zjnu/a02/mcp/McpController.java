@@ -24,7 +24,7 @@ import cn.zjnu.a02.common.util.JsonUtils;
  * <p>两条通道：
  * <ol>
  *   <li>{@code POST /mcp}：标准 JSON-RPC 2.0（{@code initialize} / {@code tools/list} / {@code tools/call}），
- *       供 MCP 客户端（如百宝箱智能体）通过 HTTP 传输调用；</li>
+ *       供外部 MCP 客户端（智能体/IDE 插件）通过 HTTP 传输调用；</li>
  *   <li>{@code GET /internal/v1/**}：**只读内部 API**，用独立 Service Token 保护，
  *       供自建的 Python MCP Server 取数（避免两套数据访问逻辑，AD-8）。</li>
  * </ol>

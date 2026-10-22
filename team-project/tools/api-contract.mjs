@@ -128,6 +128,20 @@ await check('激励历史', 'GET', '/api/companion/incentives', undefined, false
 await check('MCP 工具清单', 'GET', '/api/mcp/tools', undefined, true);
 await check('MCP 调用日志', 'GET', '/api/mcp/logs?limit=10', undefined, false);
 await check('MCP 统计', 'GET', '/api/mcp/stats', undefined, true);
+
+// ---- M7 集成层：自建 RAG（v2.0 新增） ----
+await check('知识库统计', 'GET', '/api/kb/stats', undefined, true);
+await check('知识库检索', 'POST', '/api/kb/search',
+  { query: 'Java 后端需要哪些数据库技能', topK: 3 }, true);
+await check('知识库问答', 'POST', '/api/kb/ask',
+  { question: 'Java 后端岗位需要掌握哪些数据库技能？' }, true);
+await check('知识库评估', 'POST', '/api/kb/eval', { k: 5 }, true);
+await check('知识库重建', 'POST', '/api/kb/ingest', {}, true);
+
+// ---- NFR-8 成本与限流 ----
+await check('模型调用统计', 'GET', '/api/platform/llm-stats?days=7', undefined, true);
+await check('限流状态', 'GET', '/api/platform/llm-limit', undefined, true);
+
 await check('AI 通道状态', 'GET', '/api/platform/ai-status', undefined, true);
 await check('AI 生成日志', 'GET', '/api/platform/ai-logs?limit=10', undefined, true);
 await check('提示词仓库', 'GET', '/api/platform/prompts', undefined, true);

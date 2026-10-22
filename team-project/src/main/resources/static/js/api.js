@@ -181,11 +181,23 @@ const Api = (() => {
     incentives: () => get('/api/companion/incentives'),
     emotion: (text) => post('/api/companion/emotion', { text }),
 
-    // MCP + 平台
+    // MCP（P2 可选）与平台治理
     mcpTools: () => get('/api/mcp/tools'),
     mcpCall: (tool, args) => post('/api/mcp/call', { tool, arguments: args }),
     mcpLogs: (limit) => get(`/api/mcp/logs?limit=${limit || 20}`),
     mcpStats: () => get('/api/mcp/stats'),
+
+    // M7 集成层：自建 RAG（v2.0 新增，FR-7.2）
+    kbStats: () => get('/api/kb/stats'),
+    kbSearch: (query, topK) => post('/api/kb/search', { query, topK }),
+    kbAsk: (question) => post('/api/kb/ask', { question }),
+    kbEval: (k) => post('/api/kb/eval', { k: k || 5 }),
+    kbIngest: () => post('/api/kb/ingest'),
+
+    // NFR-8：模型调用统计与限流状态
+    llmStats: (days) => get(`/api/platform/llm-stats?days=${days || 7}`),
+    llmLimit: () => get('/api/platform/llm-limit'),
+
     aiStatus: () => get('/api/platform/ai-status'),
     aiLogs: (limit) => get(`/api/platform/ai-logs?limit=${limit || 30}`),
     prompts: () => get('/api/platform/prompts'),

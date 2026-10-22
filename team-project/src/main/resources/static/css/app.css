@@ -483,3 +483,105 @@ td b, td strong { color: var(--text); font-weight: 600; }
   .form-grid { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: 96px 1fr 52px; }
 }
+
+/* ============================ 9. 视图补充样式 ============================== */
+.nav-item svg { flex: 0 0 18px; opacity: .7; }
+.nav-item.active svg { opacity: 1; }
+
+.units { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.unit-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px dashed var(--line-soft); }
+.unit-row:last-child { border-bottom: none; }
+.unit-week { flex: 0 0 42px; font-size: 12px; color: var(--text-dim); font-weight: 600; padding-top: 1px; }
+.unit-body { flex: 1; min-width: 0; }
+.unit-title { font-size: 13px; font-weight: 550; }
+.unit-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+.stage-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.li-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+.suggestions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.suggestion {
+  font-size: 12.5px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--text-soft);
+}
+.suggestion:hover { border-color: var(--primary-line); color: var(--primary-deep); background: var(--primary-soft); }
+
+.chart-ring { display: flex; flex-direction: column; align-items: center; }
+.check-row { display: flex; align-items: center; gap: 8px; }
+.check {
+  width: 19px; height: 19px; flex: 0 0 19px; border-radius: 50%;
+  border: 1.5px solid var(--line-strong); background: var(--surface);
+  display: grid; place-items: center; cursor: pointer; color: transparent;
+  font-size: 11px; line-height: 1;
+}
+.check:hover { border-color: var(--accent); }
+.check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.metric-inline { display: flex; gap: 26px; flex-wrap: wrap; }
+.metric-inline .item { min-width: 84px; }
+.metric-inline .n { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.metric-inline .l { font-size: 12px; color: var(--text-dim); }
+
+.auth-side .points { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+.auth-side .point { display: flex; gap: 10px; font-size: 13.5px; color: rgba(255,255,255,.95); }
+.auth-side .point svg { flex: 0 0 18px; opacity: .9; margin-top: 2px; }
+.container { max-width: 1080px; margin: 0 auto; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ======================= 10. 通用文本与占位 ============================ */
+.muted { color: var(--text-dim); }
+
+.stat-hint {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loading-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 34px 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* 空状态：浅底 + 柔和文字，避免用问号或大图标制造压力 */
+.callout.muted {
+  color: var(--text-dim);
+  background: var(--surface-soft);
+  border-color: var(--line-soft);
+}
+
+/* 对话面板加高场景（情景练习 / 职业伙伴） */
+.chat.tall { max-height: 560px; min-height: 320px; }
+
+@media (max-width: 720px) {
+  .chat.tall { max-height: 420px; min-height: 240px; }
+}
+
+/* 自评量表：分段式单选按钮 */
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .12s ease, background .12s ease, color .12s ease;
+}
+.choice input { accent-color: var(--primary); margin: 0; cursor: pointer; }
+.choice:hover { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary-deep); }
+.choice:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-deep);
+  font-weight: 600;
+}

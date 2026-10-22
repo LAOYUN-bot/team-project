@@ -1,5 +1,10 @@
 package cn.zjnu.a02.m5execution.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -13,6 +18,10 @@ import java.time.LocalDateTime;
  * <p>状态机：{@code TODO → DOING → DONE}，变更后需要落 {@code behavior_event}
  * 并广播 {@code Events.TaskChanged} 触发画像重算（闭环 ⑤→③）。
  */
+@Setter
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class LearningTask {
 
     private Long id;
@@ -32,83 +41,4 @@ public class LearningTask {
         return "DONE".equalsIgnoreCase(status);
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public Long getUnitId() {
-        return unitId;
-    }
-
-    public void setUnitId(Long unitId) {
-        this.unitId = unitId;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public LocalDate getDueDate() {
-        return dueDate;
-    }
-
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public LocalDateTime getDoneAt() {
-        return doneAt;
-    }
-
-    public void setDoneAt(LocalDateTime doneAt) {
-        this.doneAt = doneAt;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getUnitTitle() {
-        return unitTitle;
-    }
-
-    public void setUnitTitle(String unitTitle) {
-        this.unitTitle = unitTitle;
-    }
-
-    public String getStageName() {
-        return stageName;
-    }
-
-    public void setStageName(String stageName) {
-        this.stageName = stageName;
-    }
 }

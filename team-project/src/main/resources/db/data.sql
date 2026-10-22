@@ -12,7 +12,7 @@ INSERT INTO sys_permission (id, code, name) VALUES
   (3, 'admin:read', '管理后台查看'), (4, 'admin:config', '系统配置');
 INSERT INTO sys_role_permission (role_id, permission_id) VALUES (1,1),(1,2),(2,1),(2,2),(2,3),(2,4);
 
--- ---------------- 系统配置（雷达权重与衰减因子，可截图给评委看） ----------------
+-- ---------------- 系统配置（雷达权重 / 模型网关 / 成本与限流，v2.0） ----------------
 INSERT INTO sys_config (cfg_key, cfg_value, remark) VALUES
   ('radar.formula.version', 'v1', '雷达计算公式版本号'),
   ('radar.alpha.assessment', '0.6', '测评来源权重'),
@@ -20,17 +20,40 @@ INSERT INTO sys_config (cfg_key, cfg_value, remark) VALUES
   ('radar.alpha.task', '0.4', '学习任务来源权重'),
   ('radar.decay.alpha', '0.35', '新旧值衰减因子 new = old*(1-a)+score*a'),
   ('radar.match.formula', '100*sum(require_i*radar_i/100)/sum(require_i)', '岗位匹配度公式'),
-  ('ai.provider', 'mock', 'AI 提供方：mock / tbox'),
-  ('privacy.collect.scope', '最小必要：不采集身份证/银行卡', '隐私采集边界');
+  ('privacy.collect.scope', '最小必要：不采集身份证/银行卡', '隐私采集边界'),
 
--- ---------------- 知识库文档引用（向量托管于百宝箱知识库） ----------------
-INSERT INTO kb_doc_ref (id, title, source, category, chunk_count, updated_at) VALUES
-  (1, '“十四五”终身职业技能培训规划（节选）', '人力资源和社会保障部公开文件', '政策', 42, CURRENT_TIMESTAMP),
-  (2, '2026 年数字技术人才需求趋势观察', '公开行业研究报告（改写）', '趋势', 66, CURRENT_TIMESTAMP),
-  (3, 'Java 后端工程师岗位能力要求汇编', '公开招聘 JD 脱敏聚合（自构造）', '岗位', 88, CURRENT_TIMESTAMP),
-  (4, '数据分析师岗位能力要求汇编', '公开招聘 JD 脱敏聚合（自构造）', '岗位', 74, CURRENT_TIMESTAMP),
-  (5, '大模型应用开发岗位能力要求汇编', '公开招聘 JD 脱敏聚合（自构造）', '岗位', 59, CURRENT_TIMESTAMP),
-  (6, 'AI 伦理与个人信息保护操作指引', '公开法规与规范整理', '伦理', 37, CURRENT_TIMESTAMP);
+  -- 统一模型网关与分层策略（FR-7.1 / §3.4.1）
+  ('ai.provider', 'mock', '模型网关提供方：mock（离线模板）/ openai（OpenAI 兼容协议）'),
+  ('ai.model.dev', 'qwen2.5:7b', '开发调试模型：Ollama 本地，零费用无速率限制'),
+  ('ai.model.standard', 'deepseek-chat', '功能自测与联调模型：便宜、快'),
+  ('ai.model.demo', 'deepseek-chat', '答辩演示模型：效果与稳定性优先'),
+  ('ai.model.fallback', 'qwen-plus', '备用模型：连续失败时自动切换'),
+  ('ai.ollama.base-url', 'http://127.0.0.1:11434/v1', 'Ollama 本地 OpenAI 兼容端点'),
+  ('ai.openai.base-url', 'https://api.deepseek.com/v1', '云端 OpenAI 兼容端点（DeepSeek/通义/智谱均可）'),
+
+  -- 成本与限流（NFR-8 / §3.4.2）
+  ('ai.limit.global-rpm', '22', '客户端全局令牌桶：供应商 30 RPM 时留 25% 余量'),
+  ('ai.limit.user-rpm', '8', '单用户每分钟调用上限'),
+  ('ai.limit.daily-calls', '1500', '日调用量硬上限'),
+  ('ai.limit.alert-ratio', '0.8', '日调用量达到 80% 时告警'),
+  ('ai.cache.ttl-seconds', '600', '二级缓存 TTL：相同请求直接命中'),
+  ('ai.cost.unit-cny-per-1k-in', '0.001', '输入 token 单价（元/千 token，按实际供应商价目表调整）'),
+  ('ai.cost.unit-cny-per-1k-out', '0.002', '输出 token 单价（元/千 token）'),
+
+  -- RAG 参数（FR-7.2 / §3.3.2）
+  ('rag.chunk.size', '400', '切块目标字数（300-500）'),
+  ('rag.chunk.overlap', '60', '切块重叠字数（50-80）'),
+  ('rag.top-k', '5', '检索返回片段数'),
+  ('rag.min-score', '0.12', '最低相关度阈值，低于则拒答（防幻觉）');
+
+-- ---------------- 知识库文档（v2.0：自建 RAG 管线，语料在 classpath:kb/） ----------------
+INSERT INTO kb_doc_ref (id, code, title, source, category, chunk_count, updated_at) VALUES
+  (1, 'KB_POLICY',     '“十四五”终身职业技能培训规划要点', '人力资源和社会保障部公开文件（改写）', '政策', 0, CURRENT_TIMESTAMP),
+  (2, 'KB_TREND',      '2026 年数字技术人才需求趋势观察', '公开行业观察（自构造）', '趋势', 0, CURRENT_TIMESTAMP),
+  (3, 'KB_JD_JAVA',    'Java 后端开发工程师岗位能力要求', '公开招聘信息脱敏聚合（自构造）', '岗位', 0, CURRENT_TIMESTAMP),
+  (4, 'KB_JD_DATA',    '数据分析师岗位能力要求', '公开招聘信息脱敏聚合（自构造）', '岗位', 0, CURRENT_TIMESTAMP),
+  (5, 'KB_JD_AI',      'AI 应用开发工程师岗位能力要求', '公开招聘信息脱敏聚合（自构造）', '岗位', 0, CURRENT_TIMESTAMP),
+  (6, 'KB_ETHICS',     'AI 伦理与个人信息保护操作指引', '公开法规与规范整理', '伦理', 0, CURRENT_TIMESTAMP);
 
 -- ---------------- 职业知识图谱：岗位实体 ----------------
 INSERT INTO kg_entity (id, type, code, name, attrs_json) VALUES
@@ -250,3 +273,59 @@ INSERT INTO rubric_dimension (scenario_id, dim_key, name, weight, description) V
   (3,'PROBLEM_SOLVING','问题解决',1.2,'是否给出多套方案与折中路径'),
   (3,'COLLABORATION','协作意识',1.0,'是否理解产品目标、寻求共同利益'),
   (3,'PROFESSIONALISM','职业素养',0.7,'是否情绪稳定、对事不对人');
+
+-- ---------------- v2.0 新增：RAG 评测集（52 条 ≥ 文档要求的 50 条，用于计算 Recall@K 与拒答率） ----------------
+-- 评测方式见 tools/rag-eval.mjs 与 docs/03-测试文档.md；expected_keywords 用于判断命中片段是否切题
+INSERT INTO kb_eval_case (question, expected_doc_code, expected_keywords) VALUES
+  ('十四五规划对数字技能培训提出了什么要求？', 'KB_POLICY', '数字技能|数字经济|人工智能'),
+  ('技能人才评价体系要怎么完善？', 'KB_POLICY', '评价体系|职业发展通道|天花板'),
+  ('规划把什么作为评价培训效果的重要指标？', 'KB_POLICY', '就业率|薪酬变化|培训质量'),
+  ('高校毕业生在规划中有哪些培训支持？', 'KB_POLICY', '高校毕业生|就业创业指导|实践能力'),
+  ('规划提出要建设哪些数字技能基础设施？', 'KB_POLICY', '培训基地|培训课程|数字素养'),
+  ('新就业形态劳动者能参加技能培训吗？', 'KB_POLICY', '新就业形态|技能培训'),
+  ('规划对高技能人才培养有什么举措？', 'KB_POLICY', '高技能人才|振兴计划'),
+  ('个人职业规划应该从政策里读出什么信号？', 'KB_POLICY', '可验证成果|项目式学习|课程时长'),
+  ('2026 年数字技术岗位需求整体是什么走势？', 'KB_TREND', '总量平稳|结构分化|复合能力'),
+  ('哪些能力方向在上升？', 'KB_TREND', '云原生|AI 工具协同|数据驱动'),
+  ('为什么说只会调用现成平台的技能溢价在下降？', 'KB_TREND', '配置型|岗位溢价|底层机制'),
+  ('趋势判断怎么转化成学习计划？', 'KB_TREND', '能力模型|差距|权重高|可验证'),
+  ('盲目追热点技能有什么风险？', 'KB_TREND', '热点|稳定岗位需求|招聘信息'),
+  ('企业现在更看重 AI 的什么用法？', 'KB_TREND', '提升交付效率|核查输出|搜索引擎'),
+  ('数据驱动业务分析能力为什么上升？', 'KB_TREND', '数据结论|业务动作|报表制作'),
+  ('趋势观察的数据来源可靠吗？', 'KB_TREND', '自构造|公开资料|不构成承诺'),
+  ('Java 后端岗位对 Spring 的要求是什么？', 'KB_JD_JAVA', 'Spring Boot|依赖注入|AOP|事务'),
+  ('Java 后端需要掌握哪些数据库技能？', 'KB_JD_JAVA', 'MySQL|SQL|执行计划|索引优化'),
+  ('缓存中间件要理解哪些问题？', 'KB_JD_JAVA', 'Redis|缓存穿透|缓存雪崩|一致性'),
+  ('后端岗位对工程能力有哪些要求？', 'KB_JD_JAVA', '单元测试|Docker|CI/CD|日志'),
+  ('中级后端岗位通常还要求什么？', 'KB_JD_JAVA', '微服务|服务拆分|分布式事务|限流降级'),
+  ('后端面试常考哪些原理？', 'KB_JD_JAVA', 'JVM|垃圾回收|集合|并发'),
+  ('Spring 事务失效是怎么回事？', 'KB_JD_JAVA', 'Spring 事务|失效场景'),
+  ('接口幂等设计为什么要考？', 'KB_JD_JAVA', '幂等'),
+  ('后端岗位的软性要求有哪些？', 'KB_JD_JAVA', '沟通表达|问题拆解|持续学习'),
+  ('Linux 命令能力是必需的吗？', 'KB_JD_JAVA', 'Linux|命令'),
+  ('数据分析师日常负责什么？', 'KB_JD_DATA', '数据采集|清洗|指标体系|分析报告'),
+  ('分析师要掌握哪些 SQL 能力？', 'KB_JD_DATA', '窗口函数|多表关联|聚合'),
+  ('Pandas 和 NumPy 用在哪？', 'KB_JD_DATA', 'Python|Pandas|NumPy'),
+  ('统计学基础对分析师重要吗？', 'KB_JD_DATA', '假设检验|置信区间|显著性|因果'),
+  ('指标体系统怎么设计？', 'KB_JD_DATA', '北极星指标|过程指标|护栏指标'),
+  ('常见的数据分析方法有哪些？', 'KB_JD_DATA', '漏斗分析|留存分析|用户分群'),
+  ('数据仓库建模要学到什么程度？', 'KB_JD_DATA', '维度建模|宽表|Hive|Spark'),
+  ('新人分析师最常见的误区是什么？', 'KB_JD_DATA', '只取数|不给结论|数据口径'),
+  ('AI 应用开发岗位负责哪些工作？', 'KB_JD_AI', '大模型应用|RAG|提示词|成本'),
+  ('理解大模型能力边界包括什么？', 'KB_JD_AI', '上下文长度|幻觉|温度参数'),
+  ('提示工程的分层结构怎么组成？', 'KB_JD_AI', 'System|Context|Task|Format|Guard'),
+  ('RAG 的核心环节有哪些？', 'KB_JD_AI', '切块|向量化|相似度检索|重排|上下文拼装'),
+  ('向量数据库召回率和准确率怎么权衡？', 'KB_JD_AI', '向量数据库|召回率|准确率'),
+  ('为什么要把模型调用封装成统一网关？', 'KB_JD_AI', '统一网关|多模型切换|降级'),
+  ('模型限流和熔断属于哪类能力？', 'KB_JD_AI', '限流|缓存|退避|熔断'),
+  ('怎么控制模型调用成本？', 'KB_JD_AI', 'token|缓存|调试循环|费用失控'),
+  ('AI 安全要防哪些风险？', 'KB_JD_AI', '提示注入|数据脱敏|责任归属'),
+  ('怎么评估 RAG 的效果？', 'KB_JD_AI', 'Recall@K|答案准确率'),
+  ('职业规划类应用采集哪些信息是必要的？', 'KB_ETHICS', '最小必要|学历|目标岗位|身份证'),
+  ('使用前需要告知用户什么？', 'KB_ETHICS', '采集哪些数据|目的|第三方|撤回同意'),
+  ('手机号在界面展示时怎么处理？', 'KB_ETHICS', '加密存储|掩码|前三位'),
+  ('传给第三方模型前要做什么处理？', 'KB_ETHICS', '脱敏|姓名|院校'),
+  ('AI 生成内容为什么要标识？', 'KB_ETHICS', '标识|人工专业意见|依据'),
+  ('怎么避免用户过度依赖 AI 建议？', 'KB_ETHICS', '多条路径|推理依据|专业领域'),
+  ('算法偏见怎么测试？', 'KB_ETHICS', '性别|年龄|地域|院校'),
+  ('用户的数据权利包括什么？', 'KB_ETHICS', '导出|删除|级联|回执');

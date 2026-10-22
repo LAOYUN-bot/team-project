@@ -11,7 +11,7 @@
 新增数据源只是多注册一个工具，智能体侧零改动。
 
 ```
-百宝箱智能体 ──MCP(stdio/HTTP)──► a02-career-mcp ──只读内部 API──► Spring Boot ──► DB
+外部智能体（MCP Host）──MCP(stdio/HTTP)──► a02-career-mcp ──只读内部 API──► Spring Boot ──► DB
 ```
 
 ## 2. 为什么取数要绕一层内部 API

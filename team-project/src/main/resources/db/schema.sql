@@ -161,14 +161,76 @@ CREATE TABLE IF NOT EXISTS cert_skill (
   PRIMARY KEY (cert_id, skill_id)
 );
 
--- 知识库文档引用（向量由百宝箱知识库托管，自建侧只存引用）
+-- 知识库文档引用（v2.0：自建 RAG 管线，向量由本项目维护）
 CREATE TABLE IF NOT EXISTS kb_doc_ref (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  code        VARCHAR(64),                       -- 语料文件名，对应 classpath:kb/{code}.md
   title       VARCHAR(200) NOT NULL,
   source      VARCHAR(200) NOT NULL,
   category    VARCHAR(32),
   chunk_count INT NOT NULL DEFAULT 0,
   updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- v2.0 新增：RAG 知识库（FR-7.2）+ 模型调用日志（NFR-8）
+-- ============================================================================
+
+-- 知识库片段：切块 + 向量（向量以 JSON 数组存储；规模小，无需外部向量库）
+CREATE TABLE IF NOT EXISTS kb_chunk (
+  id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+  doc_id         BIGINT       NOT NULL,
+  chunk_no       INT          NOT NULL,
+  content        CLOB         NOT NULL,
+  embedding_json CLOB         NOT NULL,
+  char_count     INT          NOT NULL,
+  source         VARCHAR(200) NOT NULL,
+  category       VARCHAR(32),
+  updated_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uk_kb_chunk UNIQUE (doc_id, chunk_no)
+);
+
+-- 检索日志：支撑 Recall@K 评估与拒答率统计
+CREATE TABLE IF NOT EXISTS kb_retrieval_log (
+  id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id    BIGINT,
+  query      VARCHAR(500) NOT NULL,
+  top_score  DECIMAL(8,4),
+  hit_count  INT     NOT NULL DEFAULT 0,
+  refused    TINYINT NOT NULL DEFAULT 0,
+  latency_ms BIGINT  NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- RAG 评测集：问答对，用于评估召回命中率（Recall@K）
+CREATE TABLE IF NOT EXISTS kb_eval_case (
+  id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+  question          VARCHAR(300) NOT NULL,
+  expected_doc_code VARCHAR(64),
+  expected_keywords VARCHAR(300),
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 模型调用日志（NFR-8 必备表）
+CREATE TABLE IF NOT EXISTS llm_call_log (
+  id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id           BIGINT,
+  scene             VARCHAR(48)  NOT NULL,
+  provider          VARCHAR(32)  NOT NULL,
+  model             VARCHAR(64)  NOT NULL,
+  prompt_version    VARCHAR(24),
+  prompt_tokens     INT     NOT NULL DEFAULT 0,
+  completion_tokens INT     NOT NULL DEFAULT 0,
+  total_tokens      INT     NOT NULL DEFAULT 0,
+  latency_ms        BIGINT  NOT NULL DEFAULT 0,
+  success           TINYINT NOT NULL DEFAULT 1,
+  error_code        VARCHAR(48),
+  cache_hit         TINYINT NOT NULL DEFAULT 0,
+  degraded          TINYINT NOT NULL DEFAULT 0,
+  retry_count       INT     NOT NULL DEFAULT 0,
+  cost_cny          DECIMAL(12,6) NOT NULL DEFAULT 0,
+  trace_id          VARCHAR(64),
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ---------- 决策域（M3） ----------
@@ -452,6 +514,10 @@ CREATE INDEX IF NOT EXISTS idx_stage_path        ON path_stage(path_id, seq);
 CREATE INDEX IF NOT EXISTS idx_unit_stage        ON learning_unit(stage_id, seq);
 CREATE INDEX IF NOT EXISTS idx_task_user         ON learning_task(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_msg_session       ON chat_message(session_id);
+CREATE INDEX IF NOT EXISTS idx_kb_chunk_doc      ON kb_chunk(doc_id, chunk_no);
+CREATE INDEX IF NOT EXISTS idx_kb_retr_created   ON kb_retrieval_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_llm_log_created   ON llm_call_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_llm_log_scene     ON llm_call_log(scene, created_at);
 CREATE INDEX IF NOT EXISTS idx_eval_user         ON evaluation(user_id);
 CREATE INDEX IF NOT EXISTS idx_kg_rel_subject    ON kg_relation(subject_id, predicate);
 CREATE INDEX IF NOT EXISTS idx_kg_rel_object     ON kg_relation(object_id, predicate);

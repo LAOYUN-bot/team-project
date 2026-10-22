@@ -374,3 +374,83 @@ Authorization: Bearer {{token}}
 ### 【隐私】删除全部个人数据（谨慎：会清空当前账号业务数据，演示完请重启服务恢复种子数据）
 # DELETE {{host}}/api/users/me/data
 # Authorization: Bearer {{token}}
+
+
+###############################################################################
+# v2.0 新增：自建 RAG（FR-7.2）与模型调用统计（NFR-8）
+###############################################################################
+
+### 【RAG】知识库运行态
+GET {{host}}/api/kb/stats
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("知识库已摄取", function () {
+        client.assert(response.body.data.chunks > 0, "应有片段");
+    });
+%}
+
+### 【RAG】纯检索（观察召回与相关度分数）
+POST {{host}}/api/kb/search
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "query": "Java 后端需要哪些数据库技能",
+  "topK": 3
+}
+
+### 【RAG】带来源问答（可回答的问题）
+POST {{host}}/api/kb/ask
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "question": "Java 后端岗位需要掌握哪些数据库技能？"
+}
+
+> {%
+    client.test("应给出来源", function () {
+        client.assert(response.body.data.refused === false, "不该拒答");
+        client.assert(response.body.data.citations.length > 0, "应有引用");
+    });
+%}
+
+### 【RAG】拒答测试（知识库外的问题 → 必须拒答）
+POST {{host}}/api/kb/ask
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "question": "请告诉我 2027 年浙江省高考录取分数线是多少？"
+}
+
+> {%
+    client.test("跑题问题应拒答", function () {
+        client.assert(response.body.data.refused === true, "应拒答");
+        client.assert(response.body.data.answer.indexOf("暂无相关信息") >= 0, "应明确说暂无");
+    });
+%}
+
+### 【RAG】效果评估（52 条评测集）
+POST {{host}}/api/kb/eval
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "k": 5 }
+
+### 【NFR-8】模型调用统计
+GET {{host}}/api/platform/llm-stats?days=7
+Authorization: Bearer {{token}}
+
+### 【NFR-8】限流状态
+GET {{host}}/api/platform/llm-limit
+Authorization: Bearer {{token}}
+
+### 【NFR-8】模型网关与分层
+GET {{host}}/api/platform/ai-status
+Authorization: Bearer {{token}}
+
+### 【RBAC】管理端调用统计（demo 应 403；用 adminToken 应 200）
+GET {{host}}/api/admin/llm-stats?days=7
+Authorization: Bearer {{token}}

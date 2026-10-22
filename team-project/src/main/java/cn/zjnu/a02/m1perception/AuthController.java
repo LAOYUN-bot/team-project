@@ -21,7 +21,7 @@ import cn.zjnu.a02.platform.security.AuthContext;
  * <ul>
  *   <li><b>HttpOnly + SameSite=Lax Cookie</b>（架构文档 AD-7，前端不接触令牌，防 XSS 窃取）——
  *       Web 前端走这条通道；</li>
- *   <li><b>响应体中的 token</b>——供小程序端、接口调试与自动化测试使用（这些端没有 Cookie 语义）。</li>
+ *   <li><b>响应体中的 token</b>——供接口调试与自动化测试使用（这类客户端没有 Cookie 语义）。</li>
  * </ul>
  */
 @RestController

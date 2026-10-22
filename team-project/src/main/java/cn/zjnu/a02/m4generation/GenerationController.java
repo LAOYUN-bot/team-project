@@ -36,6 +36,7 @@ public class GenerationController {
 
     private final GenerationService generation;
     private final AgentChatService agentChat;
+    private final cn.zjnu.a02.ai.AiService aiService;
     private final JsonUtils json;
     private final ExecutorService executor = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "a02-chat-sse");
@@ -43,9 +44,11 @@ public class GenerationController {
         return t;
     });
 
-    public GenerationController(GenerationService generation, AgentChatService agentChat, JsonUtils json) {
+    public GenerationController(GenerationService generation, AgentChatService agentChat,
+                                cn.zjnu.a02.ai.AiService aiService, JsonUtils json) {
         this.generation = generation;
         this.agentChat = agentChat;
+        this.aiService = aiService;
         this.json = json;
     }
 
@@ -89,7 +92,7 @@ public class GenerationController {
             try {
                 long sessionId = agentChat.ensureSession(userId, request.sessionId());
                 emit(emitter, "meta", Map.of("sessionId", sessionId,
-                        "provider", "mock-or-tbox",
+                        "provider", aiService.provider(),
                         "disclaimer", "AI 生成内容仅供参考，请结合自身情况核实"));
                 Map<String, Object> result = agentChat.chatStream(userId, sessionId, request.message(),
                         token -> {
